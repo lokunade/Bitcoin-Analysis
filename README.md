@@ -1,1 +1,2 @@
 # Bitcoin-Analysis
+In this project, we work on the application of stochastic processes. We extracted the stock market data for the past couple of years and made some analyses of the stochastic process of the data.

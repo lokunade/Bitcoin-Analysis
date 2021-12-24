@@ -1,0 +1,99 @@
+#install.packages("markovchain")
+library(markovchain)
+dat <- read.csv("Bitcoin-daily.csv", check.names = F)
+dat <- dat[-1,]
+#a. reporting the dimension of the data
+dim(dat)
+#2b to make a new variable and name it trend and finding the minimum and maximum
+colnames(dat)[9] <- 'TREND'
+min(dat$TREND)
+max(dat$TREND)
+#the variable will have the below observation
+dat$TREND <- ifelse(dat$TREND > 0.05, "HPRFT",
+                   ifelse((dat$TREND > 0) & (dat$TREND < 0.05), "LPRFT",
+                          ifelse((dat$TREND < 0) & (dat$TREND > -0.01), "HLSS", "LLSS")))
+#2c. showing the frequency table
+install.packages("funModelling")
+library("funModeling")
+freq(dat$TREND)
+table(dat$TREND, useNA="ifany")
+#3b. creating a sequence matrix for four state
+mysequence<-dat$TREND
+createSequenceMatrix(mysequence)
+# 3c. Finding transition matrix, standard error, etc. using MLE algorithm
+myFit<-markovchainFit(data=mysequence,confidencelevel =.95, method = "mle")
+myFit
+
+#Finding states and their transition probabilities from three states
+alofiMc<-myFit$estimate
+alofiMc
+
+#Making transition Matrix
+a11=alofiMc[1,1]
+a12=alofiMc[1,2]
+a13=alofiMc[1,3]
+a14=alofiMc[1,4]
+
+a21=alofiMc[2,1]
+a22=alofiMc[2,2]
+a23=alofiMc[2,3]
+a24=alofiMc[2,4]
+
+a31=alofiMc[3,1]
+a32=alofiMc[3,2]
+a33=alofiMc[3,3]
+a34=alofiMc[3,4]
+
+a41=alofiMc[4,1]
+a42=alofiMc[4,2]
+a43=alofiMc[4,3]
+a44=alofiMc[4,4]
+
+#naming the states
+stateNames <- c("HPRFT", "LPRFT", "HLSS", "LLSS")
+ra <- matrix(c(a11,a12,a13, a14, a21,a22,a23, a24, a31,a32,a33, a34, a41, a42, a43, a44),nrow=4, byrow=TRUE)
+row.names(ra) <- stateNames; 
+colnames(ra) <- stateNames
+ra = round(ra,4)
+
+
+#install.packages("diagram")
+
+library(diagram)
+#plotting the state space transition
+plotmat(ra, pos = NULL, 
+        lwd = 1, box.lwd = 2, 
+        cex.txt = 0.5, 
+        box.size = 0.1, 
+        box.type = "circle", 
+        box.prop = 0.5,
+        box.col = "light blue",
+        arr.length=.1,
+        arr.width=.1,
+        self.cex = .4,
+        self.shifty = -.01,
+        self.shiftx = .13,
+        main = "Markov Chain Transition Matrix")
+
+#initial distribution -e.g. if today has higly positive, the vector: (1, 0, 0, 0)
+x1 <- matrix(c(1,0,0, 0),nrow=1, byrow=TRUE) 
+
+#distribution of x1 - Predict what will happen tomorrow (in one day)
+x1 %*% ra 
+
+#distribution of x2 - Predict what will happen day after tomorrow (in two days)
+ra2 <- ra %*% ra
+(x2 <- x1 %*% ra2)
+
+
+#distribution of x5 will help predict the 5th day's distribution
+ra3 <- ra2 %*% ra
+(x3 <- x1 %*% ra3)
+
+ra4 <- ra3%*% ra
+ra5 <- ra4%*% ra
+(x5 <- x1 %*% ra5)
+#finding the stationary distribution
+library(castor)
+p = get_stationary_distribution(ra)
+p
